@@ -1,0 +1,135 @@
+{
+  "21": {
+    "name": "FTP (Unencrypted File Transfer)",
+    "severity": "MEDIUM",
+    "risk_deduction": 15,
+    "description": "Files transferred to or from this device travel over the network without encryption.",
+    "action": "Disable FTP in the device settings or switch to secure file transfer options (SFTP/HTTPS)."
+  },
+  "23": {
+    "name": "Telnet (Unencrypted Remote Access)",
+    "severity": "HIGH",
+    "risk_deduction": 25,
+    "description": "This device accepts passwords over cleartext, making it vulnerable to interception on local Wi-Fi.",
+    "action": "Disable Telnet in the device configuration menu and turn on SSH if remote access is required."
+  },
+  "80": {
+    "name": "HTTP (Unencrypted Web Interface)",
+    "severity": "LOW",
+    "risk_deduction": 10,
+    "description": "The device's control page is unencrypted. Logging in over guest Wi-Fi could expose admin credentials.",
+    "action": "Enable HTTPS in your device settings or avoid accessing this admin page over untrusted connections."
+  },
+  "445": {
+    "name": "SMB (Shared Network Drives)",
+    "severity": "MEDIUM",
+    "risk_deduction": 15,
+    "description": "Folders or drives are shared across the network, potentially exposing personal files to other devices.",
+    "action": "Ensure password protection is enabled for all shared folders, or turn off file sharing if unused."
+  },
+  "554": {
+    "name": "RTSP (Live Video Streaming)",
+    "severity": "HIGH",
+    "risk_deduction": 30,
+    "description": "A live camera feed is accessible over the local network without strong security protections.",
+    "action": "Set a unique, strong password in your security camera settings to prevent unauthorized local viewing."
+  },
+  "8080": {
+    "name": "Alternative Web Admin Panel",
+    "severity": "MEDIUM",
+    "risk_deduction": 15,
+    "description": "A secondary web configuration page was found open on this device.",
+    "action": "Check if default login credentials (like admin/admin) are still active and update them immediately."
+  },
+  "22": {
+    "name": "SSH (Secure Remote Access)",
+    "severity": "LOW",
+    "risk_deduction": 5,
+    "description": "A secure remote-access door is open. That is fine if you use it, but it is a target if the password is weak.",
+    "action": "If you do not use remote access, switch SSH off in the device settings. If you do, use a strong password or a key."
+  },
+  "139": {
+    "name": "NetBIOS (Old Windows Sharing)",
+    "severity": "MEDIUM",
+    "risk_deduction": 10,
+    "description": "An old file-sharing service is on, which can reveal device names and shared folders.",
+    "action": "Turn off NetBIOS / legacy file sharing in the device's network settings if you do not need it."
+  },
+  "1883": {
+    "name": "MQTT (Smart-Home Messaging)",
+    "severity": "MEDIUM",
+    "risk_deduction": 15,
+    "description": "A smart-home messaging service is open, and these often need no password at all.",
+    "action": "Set a username and password on the hub or MQTT service, or switch it off if unused."
+  },
+  "3389": {
+    "name": "Remote Desktop",
+    "severity": "HIGH",
+    "risk_deduction": 30,
+    "description": "Someone could take over this computer's screen remotely if they guess the password.",
+    "action": "Turn off Remote Desktop in Windows settings unless you really need it, and never expose it to the internet."
+  },
+  "5555": {
+    "name": "Android Debug Bridge (Developer Back Door)",
+    "severity": "HIGH",
+    "risk_deduction": 30,
+    "description": "A developer debugging door is open, which can let anyone on your Wi-Fi install apps or take control.",
+    "action": "Turn off USB debugging / ADB over network in Developer options."
+  },
+  "5900": {
+    "name": "VNC (Screen Sharing)",
+    "severity": "HIGH",
+    "risk_deduction": 25,
+    "description": "Screen sharing is switched on, often with a weak or missing password.",
+    "action": "Turn off screen sharing, or set a strong password on it."
+  },
+  "7547": {
+    "name": "TR-069 (Router Remote Management)",
+    "severity": "MEDIUM",
+    "risk_deduction": 20,
+    "description": "A remote-management service is open. It has been used in large attacks on home routers.",
+    "action": "Turn off remote management / TR-069 in the router admin page and update its firmware."
+  },
+  "9100": {
+    "name": "Raw Printing",
+    "severity": "LOW",
+    "risk_deduction": 10,
+    "description": "This printer accepts print jobs from any device on your network without a login.",
+    "action": "Turn on access control or switch off raw printing if you do not use it."
+  },
+  "upnp": {
+    "name": "UPnP (Automatic Port Opening)",
+    "severity": "LOW",
+    "risk_deduction": 10,
+    "description": "This device lets other devices open doors in your router without asking you.",
+    "action": "Turn off UPnP in your router settings unless a game or app really needs it."
+  },
+  "cert_expired": {
+    "name": "Expired Security Certificate",
+    "severity": "LOW",
+    "risk_deduction": 10,
+    "description": "A web page on this device has an expired security certificate, so browsers cannot trust it.",
+    "action": "Check for a firmware update or renew the certificate in the device settings."
+  },
+  "cert_selfsigned": {
+    "name": "Unverified Security Certificate",
+    "severity": "LOW",
+    "risk_deduction": 5,
+    "description": "This device uses a home-made security certificate, so a browser cannot prove who it is.",
+    "action": "Common and low-risk at home. Install firmware updates and log in only from your own devices."
+  },
+  "wifi_open": {
+    "name": "Wi-Fi With No Password",
+    "severity": "HIGH",
+    "risk_deduction": 35,
+    "description": "The Wi-Fi network is open, so anyone in range can join it and watch the traffic.",
+    "action": "Log in to the router, open Wireless settings and set security to WPA2 or WPA3 with a strong password."
+  },
+  "wifi_weak": {
+    "name": "Outdated Wi-Fi Security",
+    "severity": "HIGH",
+    "risk_deduction": 25,
+    "description": "The Wi-Fi uses outdated security (WEP or WPA1) that can be broken in minutes.",
+    "action": "Log in to the router, open Wireless settings and switch security to WPA2 or WPA3."
+  }
+}
