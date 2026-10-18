@@ -12,9 +12,8 @@ from pdf_generator import generate_pdf_report
 
 st.set_page_config(page_title="CyberHouse", page_icon="🛡️", layout="wide")
 
-# -----------------------------------------------------------------------------
 # 1. Design tokens + CSS
-# -----------------------------------------------------------------------------
+
 C_OK, C_WARN, C_BAD, C_ACCENT = "#2DE2A6", "#FFB547", "#FF4D6D", "#38D9FF"
 
 st.markdown(f"""
@@ -139,9 +138,8 @@ MOCK_SCENARIOS = {
     ],
 }
 
-# -----------------------------------------------------------------------------
 # 3. Helpers
-# -----------------------------------------------------------------------------
+
 ICONS = [("router", "📡"), ("gateway", "📡"), ("camera", "📷"), ("monitor", "👶"), ("nursery", "👶"),
          ("tv", "📺"), ("nas", "🗄️"), ("storage", "🗄️"), ("drive", "🗄️"), ("ipad", "📱"),
          ("laptop", "💻"), ("speaker", "🔊")]
@@ -285,9 +283,8 @@ if go:
         st.session_state["scan_raw"] = raw
         st.session_state["raw_devices"] = [{**_clean(d), "classification": classify_device(d)} for d in raw]
 
-# -----------------------------------------------------------------------------
 # 5. Main layout
-# -----------------------------------------------------------------------------
+
 if "raw_devices" not in st.session_state:
     preview = [
         {"ip": "192.168.1.1", "vendor": "Router", "status": "SECURE"},
@@ -368,7 +365,7 @@ with right:
 st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
 t_map, t_fix, t_dev, t_rep = st.tabs(["Network map", "Fix plan", "All devices", "Report"])
 
-# ---- Network map
+# Network map
 with t_map:
     a, b = st.columns([1.2, 1], gap="large")
     with a:
@@ -380,7 +377,7 @@ with t_map:
                     f"<p><span class='badge b-ok'>SECURE</span> &nbsp;<span class='badge b-warn'>WARNING</span> &nbsp;"
                     f"<span class='badge b-bad'>HIGH RISK</span></p></div>", unsafe_allow_html=True)
 
-# ---- Fix plan
+#  Fix plan
 with t_fix:
     h1, h2, h3 = st.columns([3, 1.2, 1])
     h1.markdown("<div class='panel-title'>Fix these in order</div>"
@@ -404,7 +401,7 @@ with t_fix:
         c2.button("Mark as fixed", key=f"fix_{q['ip']}_{q['port']}", on_click=fix_port,
                   args=(q["ip"], q["port"]), use_container_width=True)
 
-# ---- Devices
+# Devices
 with t_dev:
     cols = st.columns(2, gap="medium")
     order = ["HIGH RISK", "WARNING", "SECURE"]
@@ -455,7 +452,7 @@ with t_dev:
     else:
         st.caption("Teaching the AI is available after a real scan.")
 
-# ---- Report
+# Report
 with t_rep:
     st.markdown("<div class='panel'><div class='panel-title'>Family action report</div>"
                 "<p class='muted'>A printable checklist with every device and what to do about it. "
