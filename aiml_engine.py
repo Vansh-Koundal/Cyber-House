@@ -1,18 +1,4 @@
-# aiml_engine.py
-"""
-AI/ML engine for the Household Cyber Health Dashboard.
 
-Part 1: DeviceClassifier
-    Predicts what kind of device something is from three signals:
-      - its open-port signature (which of the scanned ports respond)
-      - its vendor / OUI / label text (character n-grams, so "Hikvision" and
-        "Hikvision Digital" look alike)
-      - optional response characteristics, e.g. a service banner (device["banner"])
-    Model: TF-IDF + multi-hot ports -> multinomial Logistic Regression.
-    It is lightweight (trains in well under a second), returns calibrated-ish
-    probabilities, and is explainable: every prediction comes with the signals
-    that pushed it toward that label.
-"""
 import json
 import os
 import random
@@ -27,7 +13,7 @@ SEED = 42
 PORTS = [21, 23, 80, 445, 554, 8080]
 CONFIDENCE_FLOOR = 0.45  # below this we say "best guess" instead of asserting a type
 
-# Chip makers appear inside almost every kind of gadget, so their name says little about the device.
+# Chip makers appear inside almost every kind of gadget so their name says little about the device
 CHIP_VENDORS = ["AzureWave Technology", "Realtek Semiconductor", "MediaTek", "Murata Manufacturing",
                 "Liteon Technology", "Hon Hai Precision", "Ralink Technology", "Qualcomm Atheros",
                 "Texas Instruments", "Shenzhen Chipset Co"]
@@ -74,8 +60,8 @@ DEVICE_META = {
     "Phone / Tablet": ("📱", False),
 }
 
-# Behavioural profiles used to synthesise training data.
-# ports: probability that the port is open for this device type.
+# Behavioural profiles used to synthesise training data
+# ports: probability that the port is open for this device type
 PROFILES = {
     "Smart Security Camera": {
         "ports": {554: .90, 80: .50, 23: .35, 8080: .30, 21: .05},
@@ -298,14 +284,12 @@ def model_report():
             "holdout_accuracy": round(c.holdout_accuracy, 3), "user_labels": len(c.user_labels)}
 
 
-# =============================================================================
 # Part 2: Plain-English Explainer
-#   explain_risk()  - offline template engine that adapts to the device type the
+#   explain_risk():   offline template engine that adapts to the device type the
 #                     classifier predicted (always works, safe for live demos)
-#   llm_explain()   - optional LLM rewrite in a friendly "cyber expert talking to
+#   llm_explain():    optional LLM rewrite in a friendly "cyber expert talking to
 #                     a parent" voice; returns None if no key / no internet so the
-#                     caller can fall back to the template.
-# =============================================================================
+#                     caller can fall back to the template
 import os
 import re
 
