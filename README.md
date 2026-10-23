@@ -2,7 +2,7 @@
 
 A friendly network safety checker for families. It scans your home network, works out what each device is using a small machine-learning model, explains every risk in plain English, and lets you watch your **Home Safety Score** climb as you fix things.
 
-Built and Presented By Vansh Koundal & Ved Tulashidas Mhatre (Grade 11) For StogoFest V4.0 2026
+Built and Presented By Vansh Koundal & Ved Tulashidas Mhatre For StogoFest V4.0 2026
 
 <!-- Add screenshots here: ![Dashboard](docs/dashboard.png) -->
 
