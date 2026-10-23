@@ -1,0 +1,21 @@
+[
+  {
+    "mac": "10:68:38:41:49:ef",
+    "vendor": "AzureWave Technology Inc.",
+    "hostname": "VanshHP",
+    "banner": "",
+    "open_ports": [
+      139,
+      445
+    ],
+    "label": "Work Laptop / PC"
+  },
+  {
+    "mac": "04:2e:c1:f3:c8:fc",
+    "vendor": "Apple, Inc.",
+    "hostname": "Manjuip16ProMax",
+    "banner": "",
+    "open_ports": [],
+    "label": "Phone / Tablet"
+  }
+]
