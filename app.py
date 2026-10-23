@@ -7,7 +7,7 @@ import streamlit as st
 
 from scanner import run_full_network_audit, detect_subnet, get_last_error
 from aiml_engine import classify_device, model_report, explain_risk, save_user_label, DEVICE_META
-from evaluator import calculate_health_index, load_risk_db
+from evaluator import calculate_health_index
 from pdf_generator import generate_pdf_report
 
 st.set_page_config(page_title="CyberHouse", page_icon="🛡️", layout="wide")
