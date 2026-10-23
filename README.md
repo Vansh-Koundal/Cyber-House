@@ -26,7 +26,7 @@ You need **Python 3.10 or newer** ([python.org](https://www.python.org/downloads
 The first launch installs the libraries (a minute or two), then your browser opens the dashboard. **Demo mode is on by default**, so you can explore sample homes without touching your network.
 
 ## Scanning your real network
-
+Note: Only real scans need elevated rights; demo mode runs normally as an ordinary user.
 1. **Windows only:** install [Npcap](https://npcap.com) (tick "WinPcap API-compatible mode").
 2. Run the app as **Administrator** (right-click `run.bat` → Run as administrator). On Mac/Linux use `sudo bash run.sh`.
 3. In the sidebar, turn **Demo mode** off, tick the **permission checkbox**, pick Quick or Deep scan, and press **Scan my network**.
