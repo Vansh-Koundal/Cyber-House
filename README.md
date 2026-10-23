@@ -5,7 +5,8 @@ A friendly network safety checker for families. It scans your home network, work
 Built for STOGOFEST.
 
 <!-- Add screenshots here: ![Dashboard](docs/dashboard.png) -->
-<img width="1535" height="693" alt="image" src="https://github.com/user-attachments/assets/c6f0e87b-6956-4afd-92a6-8d2cf4a2023d" />
+<img width="1535" height="690" alt="image" src="https://github.com/user-attachments/assets/14453179-ff5f-409c-9978-4ae2ce8beec8" />
+
 
 ## What it does
 
@@ -16,6 +17,7 @@ Built for STOGOFEST.
 - **Plain-English advice** for every finding, with a time estimate and a fix.
 - **What-if fixing:** mark an issue as fixed and the score updates live.
 - **Printable PDF report** for the family.
+<img width="1535" height="693" alt="image" src="https://github.com/user-attachments/assets/5e543cec-1c60-4110-b902-c5e7769ac364" />
 
 ## Quick start
 
@@ -31,6 +33,7 @@ The first launch installs the libraries (a minute or two), then your browser ope
 1. **Windows only:** install [Npcap](https://npcap.com) (tick "WinPcap API-compatible mode").
 2. Run the app as **Administrator** (right-click `run.bat` → Run as administrator). On Mac/Linux use `sudo bash run.sh`.
 3. In the sidebar, turn **Demo mode** off, tick the **permission checkbox**, pick Quick or Deep scan, and press **Scan my network**.
+<img width="1535" height="697" alt="image" src="https://github.com/user-attachments/assets/1d6c1e29-1a91-4f5a-9e29-5593a1526226" />
 
 > ⚠️ **Only scan networks you own or have permission to test.** Scanning other people's networks can be illegal.
 
