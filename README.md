@@ -5,6 +5,7 @@ A friendly network safety checker for families. It scans your home network, work
 Built for STOGOFEST.
 
 <!-- Add screenshots here: ![Dashboard](docs/dashboard.png) -->
+<img width="1535" height="693" alt="image" src="https://github.com/user-attachments/assets/c6f0e87b-6956-4afd-92a6-8d2cf4a2023d" />
 
 ## What it does
 
