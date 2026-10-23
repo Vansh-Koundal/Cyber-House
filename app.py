@@ -236,22 +236,23 @@ def teach(mac):
 # 4. Sidebar
 # -----------------------------------------------------------------------------
 def _hosted():
-       if os.environ.get("HOSTED_DEMO") == "1":
-           return True
-       try:
-           return str(st.secrets.get("HOSTED_DEMO", "")) == "1"
-       except Exception:
-           return False
+    if os.environ.get("HOSTED_DEMO") == "1":
+        return True
+    try:
+        return str(st.secrets.get("HOSTED_DEMO", "")) == "1"
+    except Exception:
+        return False
 
 
 HOSTED = _hosted()
+
 with st.sidebar:
     st.markdown("### 🛡️ Control panel")
     use_demo = st.toggle("Demo mode", value=True, disabled=HOSTED,
                          help="Use a sample home instead of scanning your real network.")
     use_demo = use_demo or HOSTED
     scenario = st.selectbox("Sample home", list(MOCK_SCENARIOS.keys()), disabled=not use_demo)
-   subnet = st.text_input("Network range", value="" if HOSTED else detect_subnet(), disabled=use_demo)
+    subnet = st.text_input("Network range", value="" if HOSTED else detect_subnet(), disabled=use_demo)
     depth = st.radio("Scan depth", ["Quick scan", "Deep scan"], horizontal=True, disabled=use_demo,
                      help="Quick checks 6 common risky ports. Deep checks 16 ports plus UPnP, security "
                           "certificates and Wi-Fi security, and takes longer.")
