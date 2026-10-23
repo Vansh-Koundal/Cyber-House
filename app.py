@@ -244,7 +244,7 @@ def _hosted():
            return False
 
 
-   HOSTED = _hosted()
+HOSTED = _hosted()
 with st.sidebar:
     st.markdown("### 🛡️ Control panel")
     use_demo = st.toggle("Demo mode", value=True, disabled=HOSTED,
