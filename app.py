@@ -324,14 +324,16 @@ score, devices = ev["score"], ev["devices"]
 prev = st.session_state["shown_score"]
 st.session_state["shown_score"] = score
 
-db = load_risk_db()
 queue = []
 for d in devices:
     for r in d["risks"]:
+        trial = [{**x, "open_ports": [p for p in x["open_ports"]
+                                      if not (x["ip"] == d["ip"] and p == r["port"])]} for x in live]
+        gain = calculate_health_index(trial)["score"] - score
         queue.append({"ip": d["ip"], "vendor": d["vendor"], "port": r["port"], "name": r["name"],
-                      "severity": r["severity"], "gain": db[str(r["port"])]["risk_deduction"],
+                      "severity": r["severity"], "gain": gain, "deduction": r["deduction"],
                       "action": r["action"], "description": r["description"], "cls": d["classification"]})
-queue.sort(key=lambda x: -x["gain"])
+queue.sort(key=lambda x: (-x["gain"], -x["deduction"]))
 
 original = calculate_health_index(st.session_state["raw_devices"])["score"]
 n_fixed = sum(len(v) for v in fixed.values())
