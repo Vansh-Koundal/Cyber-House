@@ -2,7 +2,7 @@
 
 A friendly network safety checker for families. It scans your home network, works out what each device is using a small machine-learning model, explains every risk in plain English, and lets you watch your **Home Safety Score** climb as you fix things.
 
-Built for STOGOFEST.
+Built by Vansh Koundal & Ved Tulashidas Mhatre (Grade 11) for STOGOFEST v4.0 2026.
 
 <!-- Add screenshots here: ![Dashboard](docs/dashboard.png) -->
 <img width="1535" height="690" alt="image" src="https://github.com/user-attachments/assets/14453179-ff5f-409c-9978-4ae2ce8beec8" />
