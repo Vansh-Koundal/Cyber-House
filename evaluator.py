@@ -1,5 +1,6 @@
 # evaluator.py
 import json
+import os
 from functools import lru_cache
 from statistics import mean
 
@@ -8,10 +9,11 @@ from aiml_engine import classify_device
 TYPE_WEIGHT = {"Smart Security Camera": 1.5, "Baby Monitor": 1.5, "NAS / Shared Storage": 1.3,
                "Smart Speaker": 1.2, "Router / Gateway": 1.2}
 LAN_EXPECTED = {"Router / Gateway": {80}}  # admin page on the home LAN is normal
+DEFAULT_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "risk_db.json")
 
 
 @lru_cache(maxsize=None)
-def load_risk_db(db_path="risk_db.json"):
+def load_risk_db(db_path=DEFAULT_DB):
     with open(db_path, "r") as f:
         return json.load(f)
 
@@ -33,7 +35,7 @@ def evaluate_device_risk(open_ports, risk_db, label=None, weight=1.0):
     return total, risks
 
 
-def calculate_health_index(devices_scan_data, risk_db_path="risk_db.json"):
+def calculate_health_index(devices_scan_data, risk_db_path=DEFAULT_DB):
     risk_db = load_risk_db(risk_db_path)
     processed, health = [], []
     for device in devices_scan_data:

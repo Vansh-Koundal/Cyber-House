@@ -7,6 +7,7 @@ import time
 import streamlit as st
 
 from scanner import run_full_network_audit, detect_subnet, get_last_error
+from scan_io import ScanFileError, parse_scan
 from aiml_engine import classify_device, model_report, explain_risk, save_user_label, DEVICE_META
 from evaluator import calculate_health_index
 from pdf_generator import generate_pdf_report
@@ -245,23 +246,49 @@ def _hosted():
 
 
 HOSTED = _hosted()
+REPO_URL = "https://github.com/Vansh-Koundal/Cyber-House"
+SCANNER_URL = REPO_URL + "/releases/latest"
+ACTION = "Show results" if HOSTED else "Scan my network"
+
+
+def _load_upload(f):
+    """Read the scan file the user uploaded. Returns [] (and says why) if it is not usable."""
+    try:
+        f.seek(0)
+        return parse_scan(f.read())
+    except ScanFileError as err:
+        st.sidebar.warning(str(err))
+        return []
+
 
 with st.sidebar:
     st.markdown("### 🛡️ Control panel")
-    use_demo = st.toggle("Demo mode", value=True, disabled=HOSTED,
-                         help="Use a sample home instead of scanning your real network.")
-    use_demo = use_demo or HOSTED
-    scenario = st.selectbox("Sample home", list(MOCK_SCENARIOS.keys()), disabled=not use_demo)
-    subnet = st.text_input("Network range", value="" if HOSTED else detect_subnet(), disabled=use_demo)
-    depth = st.radio("Scan depth", ["Quick scan", "Deep scan"], horizontal=True, disabled=use_demo,
-                     help="Quick checks 6 common risky ports. Deep checks 16 ports plus UPnP, security "
-                          "certificates and Wi-Fi security, and takes longer.")
+    uploaded = None
+    if HOSTED:
+        scenario = st.selectbox("Sample home", list(MOCK_SCENARIOS.keys()),
+                                help="Explore the dashboard with a made-up home.")
+        st.markdown("<div class='consent'>🏠 <b>Check your own home?</b> A website cannot see inside your Wi-Fi, "
+                    "so a small scanner runs on your computer and saves a file that you upload here.</div>",
+                    unsafe_allow_html=True)
+        st.link_button("1. Download the scanner", SCANNER_URL, use_container_width=True)
+        st.caption("2. Run it on a computer connected to your home Wi-Fi.")
+        uploaded = st.file_uploader("3. Upload cyberhouse_scan.json", type="json")
+        st.caption("Your file is read for this session only and is not saved by this app.")
+        use_demo = uploaded is None  # an uploaded file counts as a real scan, so permission is required
+        subnet, depth = "", "Quick scan"
+    else:
+        use_demo = st.toggle("Demo mode", value=True, help="Use a sample home instead of scanning your real network.")
+        scenario = st.selectbox("Sample home", list(MOCK_SCENARIOS.keys()), disabled=not use_demo)
+        subnet = st.text_input("Network range", value=detect_subnet(), disabled=use_demo)
+        depth = st.radio("Scan depth", ["Quick scan", "Deep scan"], horizontal=True, disabled=use_demo,
+                         help="Quick checks 6 common risky ports. Deep checks 16 ports plus UPnP, security "
+                              "certificates and Wi-Fi security, and takes longer.")
     tech = st.toggle("Show technical details", value=False, help="Adds ports, hardware addresses and device banners.")
     st.markdown("<div class='consent'>⚠️ Only scan networks you own or are allowed to test. "
                 "Scanning other people's networks can be illegal.</div>", unsafe_allow_html=True)
     consent = st.checkbox("I own this network or have permission to scan it", key="consent",
                           help="Required for real scans. Demo mode does not touch your network.")
-    scan = st.button("Scan my network", use_container_width=True, type="primary",
+    scan = st.button(ACTION, use_container_width=True, type="primary",
                      disabled=(not use_demo and not consent))
 
 st.session_state.setdefault("fixed_ports", {})
@@ -286,7 +313,13 @@ if go:
     with st.spinner("Deep scan in progress. This can take a minute..." if (deep and not use_demo) else "Scanning your network..."):
         time.sleep(0.6)
         source = "sample"
-        if use_demo:
+        if uploaded is not None:
+            raw = _load_upload(uploaded)
+            if raw:
+                source = "live"
+            else:
+                raw = MOCK_SCENARIOS[scenario]
+        elif use_demo:
             raw = MOCK_SCENARIOS[scenario]
         else:
             raw = run_full_network_audit(ip_range=subnet, deep=deep)
@@ -317,12 +350,12 @@ if "raw_devices" not in st.session_state:
             "<p class='hero-grad'>Is your home network safe?</p>"
             "<p class='hero-sub'>See every connected device, find out what is exposed, and fix it "
             "step by step. No technical knowledge needed.</p>"
-            "<div class='feat'><i>🧠</i><div><b>AI device recognition</b><span>Identifies cameras, TVs, speakers and more from how they behave.</span></div></div>"
+            "<div class='feat'><i>🧠</i><div><b>AI device recognition</b><span>Identifies cameras, TVs, speakers and more from their brand, name and open ports.</span></div></div>"
             "<div class='feat'><i>🗣️</i><div><b>Plain-English advice</b><span>Every risk explained like a friend would, with a clear fix.</span></div></div>"
             "<div class='feat'><i>📈</i><div><b>Watch your score climb</b><span>Fix issues and see your home safety score update live.</span></div></div>",
             unsafe_allow_html=True)
         st.write("")
-        if st.button("Start scan", type="primary", use_container_width=True, disabled=not (use_demo or consent)):
+        if st.button(ACTION, type="primary", use_container_width=True, disabled=not (use_demo or consent)):
             st.session_state["_go"] = True
             st.rerun()
         if not use_demo and not consent:
@@ -456,6 +489,7 @@ with t_dev:
             st.markdown(f"**{d['vendor']}** → {c['icon']} {c['label']} ({c['confidence']:.0%})")
             for reason in c["reasons"]:
                 st.markdown(f"- Because {reason}")
+            if c["note"]:
                 st.caption(c["note"])
     if st.session_state.get("source") == "live" and not HOSTED:
         with st.expander("Teach the AI (fix a wrong guess)", expanded=any(d["classification"]["uncertain"] for d in devices)):

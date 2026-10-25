@@ -16,6 +16,7 @@ Part 1: DeviceClassifier
 import json
 import os
 import random
+import re
 
 import numpy as np
 from scipy.sparse import csr_matrix, hstack
@@ -305,11 +306,6 @@ def model_report():
 #                     a parent" voice; returns None if no key / no internet so the
 #                     caller can fall back to the template.
 # =============================================================================
-import os
-import re
-
-import requests
-
 # label -> (short noun, why this device matters)
 ROLE = {
     "Smart Security Camera": ("camera", "It can see inside your home, so it is worth locking down properly."),

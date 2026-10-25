@@ -1,13 +1,13 @@
 # scanner.py  -  real-network scanner (ARP discovery + TCP connect scan + banner grab)
 # Only scan networks you own or have permission to test.
 import concurrent.futures
+import ipaddress
 import platform
 import re
 import socket
 import ssl
 import subprocess
 import time
-
 import requests
 
 HIGH_RISK_PORTS = [21, 23, 80, 445, 554, 8080]  # quick scan
@@ -87,20 +87,66 @@ def resolve_hostname(ip):
         return ""
 
 
-def arp_scan(ip_range, timeout=3):
+_ARP_LINE = re.compile(r"(\d{1,3}(?:\.\d{1,3}){3})\)?\s+(?:at\s+)?"
+                       r"([0-9A-Fa-f]{1,2}(?:[:-][0-9A-Fa-f]{1,2}){5})\b")
+_NEIGH_LINE = re.compile(r"(\d{1,3}(?:\.\d{1,3}){3})\s+dev\s+\S+\s+lladdr\s+([0-9A-Fa-f:]{17})")
+
+
+def _norm_mac(raw):
+    return ":".join(p.zfill(2) for p in re.split(r"[:-]", raw)).upper()
+
+
+def parse_arp_table(text):
+    """Turn the output of `arp -a` (Windows), `arp -an` (macOS/Linux) or `ip neigh` into {ip: MAC}."""
+    table = {}
+    for ip, raw in _ARP_LINE.findall(text) + _NEIGH_LINE.findall(text):
+        mac = _norm_mac(raw)
+        if mac == "FF:FF:FF:FF:FF:FF" or int(mac[:2], 16) & 1:  # skip broadcast and multicast entries
+            continue
+        table[ip] = mac
+    return table
+
+
+def _read_arp_table():
+    table = {}
+    for cmd in (["arp", "-a"] if platform.system() == "Windows" else ["arp", "-an"], ["ip", "neigh"]):
+        if platform.system() == "Windows" and cmd[0] == "ip":
+            continue
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=8).stdout
+        except Exception:
+            continue
+        table.update(parse_arp_table(out))
+    return table
+
+
+def _poke(ip):
+    # Sending any packet to a local address makes the OS ask "who has this IP?" (ARP).
+    # That needs no administrator rights and no extra driver (Npcap).
     try:
-        from scapy.all import ARP, Ether, conf, srp
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(0.2)
+            sock.sendto(b"\x00", (ip, 9))
     except Exception:
-        raise ScanError("Scapy is not installed. Run: python -m pip install scapy")
-    conf.verb = 0
+        pass
+
+
+def arp_scan(ip_range, timeout=3):
+    """Find devices on the local network without admin rights: nudge every address, then read the OS device list."""
     try:
-        answered = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range),
-                       timeout=timeout, retry=1, verbose=False)[0]
-    except Exception as e:
-        raise ScanError(f"ARP scan failed ({e}). On Windows, install Npcap and run PyCharm as Administrator.")
+        net = ipaddress.ip_network(ip_range, strict=False)
+    except ValueError:
+        raise ScanError("That network range isn't valid. Example: 192.168.1.0/24")
+    if net.num_addresses > 1024:
+        raise ScanError("That network range is too large. Use something like 192.168.1.0/24.")
+    hosts = [str(h) for h in net.hosts()]
+    hostset = set(hosts)
     seen = {}
-    for _, rcv in answered:
-        seen[rcv.psrc] = rcv.hwsrc
+    for _ in range(2):  # a second pass catches devices that were slow to answer
+        with concurrent.futures.ThreadPoolExecutor(max_workers=64) as ex:
+            list(ex.map(_poke, hosts))
+        time.sleep(1.0)
+        seen.update({ip: mac for ip, mac in _read_arp_table().items() if ip in hostset})
     devices = [{"ip": ip, "mac": mac, "vendor": resolve_vendor(mac), "hostname": "", "open_ports": [], "banner": ""}
                for ip, mac in sorted(seen.items(), key=lambda kv: tuple(int(x) for x in kv[0].split(".")))]
     # device names (e.g. "iPhone-de-Ali", "DESKTOP-4F2K") are a strong clue; don't wait on slow lookups
@@ -230,15 +276,36 @@ def _wifi_finding(auth):
     return None
 
 
-def _find_gateway(devices):
+_IPV4 = re.compile(r"\d{1,3}(?:\.\d{1,3}){3}")
+
+
+def parse_default_gateways(text, system):
+    """Return every default-gateway address found in the output of ipconfig / route / ip route."""
+    if system == "Windows":
+        found = []
+        for block in re.findall(r"Default Gateway[^\n]*(?:\n[ \t]+\S[^\n]*)?", text):
+            found += _IPV4.findall(block)
+        return found
+    if system == "Darwin":
+        return re.findall(r"gateway:\s*(\d{1,3}(?:\.\d{1,3}){3})", text)
+    return re.findall(r"default via (\d{1,3}(?:\.\d{1,3}){3})", text)
+
+
+def _default_gateways():
+    system = platform.system()
+    cmd = {"Windows": ["ipconfig"], "Darwin": ["route", "-n", "get", "default"]}.get(system, ["ip", "route"])
     try:
-        from scapy.all import conf
-        gw = conf.route.route("0.0.0.0")[2]
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=5).stdout
+    except Exception:
+        return []
+    return parse_default_gateways(out, system)
+
+
+def _find_gateway(devices):
+    for gw in _default_gateways():
         hit = next((d for d in devices if d["ip"] == gw), None)
         if hit:
             return hit
-    except Exception:
-        pass
     return next((d for d in devices if d["ip"].endswith(".1")), devices[0])
 
 
@@ -266,21 +333,27 @@ def add_deep_findings(devices):
     return devices
 
 
-def run_full_network_audit(ip_range=None, target_ports=None, deep=False):
-    """Returns a list of devices, or [] with the reason in get_last_error()."""
+def run_full_network_audit(ip_range=None, target_ports=None, deep=False, progress=None):
+    """Returns a list of devices, or [] with the reason in get_last_error().
+    `progress` is an optional function that receives short status messages."""
     global _last_error
     _last_error = ""
+    say = progress or (lambda msg: None)
     ports = target_ports or (DEEP_PORTS if deep else HIGH_RISK_PORTS)
+    say("Looking for devices on your Wi-Fi...")
     try:
         devices = arp_scan(ip_range or detect_subnet())
     except ScanError as e:
         _last_error = str(e)
         return []
     if not devices:
-        _last_error = "No devices answered. Check you are on the right Wi-Fi and the range matches your network."
+        _last_error = ("No devices were found. Check that this computer is connected to your home Wi-Fi "
+                       "(not a guest network) and try again.")
         return []
+    say(f"Found {len(devices)} devices. Checking each one for risky settings...")
     devices = scan_ports_for_devices(devices, ports)
     if deep:
+        say("Running deep checks (UPnP, security certificates, Wi-Fi security)...")
         add_deep_findings(devices)
     return devices
 
