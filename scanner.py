@@ -142,11 +142,13 @@ def arp_scan(ip_range, timeout=3):
     hosts = [str(h) for h in net.hosts()]
     hostset = set(hosts)
     seen = {}
-    for _ in range(2):  # a second pass catches devices that were slow to answer
-        with concurrent.futures.ThreadPoolExecutor(max_workers=64) as ex:
-            list(ex.map(_poke, hosts))
-        time.sleep(1.0)
-        seen.update({ip: mac for ip, mac in _read_arp_table().items() if ip in hostset})
+pending = hosts
+for attempt in range(4):  # keep asking addresses that have not answered yet
+    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as ex:
+        list(ex.map(_poke, pending))
+    time.sleep(1.5 if attempt == 0 else 1.0)
+    seen.update({ip: mac for ip, mac in _read_arp_table().items() if ip in hostset})
+    pending = [h for h in hosts if h not in seen]
     devices = [{"ip": ip, "mac": mac, "vendor": resolve_vendor(mac), "hostname": "", "open_ports": [], "banner": ""}
                for ip, mac in sorted(seen.items(), key=lambda kv: tuple(int(x) for x in kv[0].split(".")))]
     # device names (e.g. "iPhone-de-Ali", "DESKTOP-4F2K") are a strong clue; don't wait on slow lookups
