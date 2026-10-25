@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+build_env/
+build/
+dist/
+*.spec
+.idea/
+.pytest_cache/
+*.before_teach
+# private to each person: never commit these
+user_labels.json
+real_devices.csv
+cyberhouse_scan.json
+my_scan.json
+.streamlit/secrets.toml
