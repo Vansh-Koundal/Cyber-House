@@ -1,0 +1,27 @@
+name: Build scanner
+# Push a tag like v1.0 (git tag v1.0 && git push origin v1.0) to build CyberHouse-Scanner.exe
+# and attach it to a GitHub Release. You can also run it by hand from the Actions tab.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-agent.txt pyinstaller
+      - run: pyinstaller agent.py --onefile --name CyberHouse-Scanner --collect-all manuf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CyberHouse-Scanner-windows
+          path: dist/CyberHouse-Scanner.exe
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/CyberHouse-Scanner.exe
