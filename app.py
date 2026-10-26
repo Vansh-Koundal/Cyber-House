@@ -100,8 +100,8 @@ button[kind="primary"] {{ background:var(--accent) !important; color:#031018 !im
 .stApp::before {{ content:""; position:fixed; inset:0; pointer-events:none;
   background-image:linear-gradient(rgba(56,217,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(56,217,255,.04) 1px, transparent 1px);
   background-size:42px 42px; mask-image:radial-gradient(ellipse at 50% 20%, #000 30%, transparent 75%); }}
-.hero-grad {{ background:linear-gradient(90deg,#E6EEF9,#38D9FF 60%,#2DE2A6); -webkit-background-clip:text; background-clip:text;
-  color:transparent; font-family:'Chakra Petch'; font-weight:700; font-size:3rem; line-height:1.05; margin:0 0 .6rem; }}
+.hero-grad {{ color:#E6EEF9; text-shadow:0 0 28px rgba(56,217,255,.35); font-family:'Chakra Petch','Segoe UI',system-ui,sans-serif;
+  font-weight:700; font-size:3rem; line-height:1.05; margin:0 0 .6rem; }}
 .feat {{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--line); }}
 .feat i {{ font-style:normal; font-size:1.3rem; min-width:38px; height:38px; display:flex; align-items:center; justify-content:center;
   background:#0E1930; border:1px solid var(--line); border-radius:6px; }}
