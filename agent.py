@@ -4,6 +4,7 @@ Run this on a computer that is connected to your home Wi-Fi. It finds the device
 checks them for risky settings and saves a file that you upload to the CyberHouse website.
 It only looks. It never changes anything on your devices.
 """
+import ipaddress
 import os
 import webbrowser
 
@@ -31,6 +32,12 @@ def main():
         return
     deep = input("Run a deep scan? It checks more but takes longer. (y/N): ").strip().lower() == "y"
     subnet = detect_subnet()
+    typed = input(f"Network to scan [{subnet}] (press Enter to accept): ").strip()
+    if typed:
+        try:
+            subnet = str(ipaddress.ip_network(typed, strict=False))
+        except ValueError:
+            print(f"'{typed}' is not a valid network range, so {subnet} will be used.")
     print(f"\nScanning {subnet}. This usually takes 1-2 minutes, please wait.\n")
     devices = run_full_network_audit(subnet, deep=deep, progress=lambda msg: print("  - " + msg))
     if not devices:

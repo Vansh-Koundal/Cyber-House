@@ -137,14 +137,14 @@ def _device_text(device):
 
 
 class DeviceClassifier:
-    def __init__(self, seed=SEED, samples_per_class=90):
+    def __init__(self, seed=SEED, samples_per_class=90, user_labels=None):
         self._rng = random.Random(seed)
         ports, texts, labels = self._synthesise(samples_per_class)
         Xp_tr, Xp_te, t_tr, t_te, y_tr, y_te = train_test_split(
             ports, texts, labels, test_size=0.2, random_state=seed, stratify=labels)
 
         # Human-in-the-loop: corrections the user saved are added to the training set
-        self.user_labels = load_user_labels()
+        self.user_labels = load_user_labels() if user_labels is None else list(user_labels)
         self.user_by_mac = {u["mac"].lower(): u["label"] for u in self.user_labels if u.get("mac")}
         Xp_tr, t_tr, y_tr = list(Xp_tr), list(t_tr), list(y_tr)
         for u in self.user_labels:
@@ -276,11 +276,16 @@ def reset_classifier():
     _CLASSIFIER = None
 
 
+def make_label_record(device, label):
+    """The training example for one correction from the user."""
+    return {"mac": (device.get("mac") or "").lower(), "vendor": device.get("vendor", ""),
+            "hostname": device.get("hostname", ""), "banner": device.get("banner", ""),
+            "open_ports": [p for p in device.get("open_ports", []) if isinstance(p, int)], "label": label}
+
+
 def save_user_label(device, label):
-    """Remember a correction from the user and retrain on next use."""
-    rec = {"mac": (device.get("mac") or "").lower(), "vendor": device.get("vendor", ""),
-           "hostname": device.get("hostname", ""), "banner": device.get("banner", ""),
-           "open_ports": [p for p in device.get("open_ports", []) if isinstance(p, int)], "label": label}
+    """Remember a correction from the user (on this computer) and retrain on next use."""
+    rec = make_label_record(device, label)
     labels = [u for u in load_user_labels() if u.get("mac") != rec["mac"]] + [rec]
     with open(LABELS_PATH, "w") as f:
         json.dump(labels, f, indent=2)
@@ -291,8 +296,8 @@ def classify_device(device):
     return get_classifier().classify(device)
 
 
-def model_report():
-    c = get_classifier()
+def model_report(clf=None):
+    c = clf or get_classifier()
     return {"algorithm": "TF-IDF (character n-grams) + port signature → Logistic Regression",
             "classes": [str(x) for x in c.model.classes_], "train_samples": c.n_train,
             "holdout_accuracy": round(c.holdout_accuracy, 3), "user_labels": len(c.user_labels)}

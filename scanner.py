@@ -27,18 +27,35 @@ class ScanError(Exception):
 
 
 # --------------------------------------------------------------------------- helpers
-def detect_subnet():
-    """Best-effort guess of the local /24 (sends no packets)."""
+def _local_ip():
+    """The address this computer uses to reach the internet (sends no packets)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
+        return s.getsockname()[0]
     except Exception:
-        return "192.168.1.0/24"
+        return None
     finally:
         s.close()
-    return ".".join(ip.split(".")[:3]) + ".0/24"
 
+
+def detect_subnet():
+    """The network this computer is on, using the real subnet mask when the OS will tell us.
+    Falls back to the /24 around our own address, and to 192.168.1.0/24 if we are offline."""
+    ip = _local_ip()
+    if not ip:
+        return "192.168.1.0/24"
+    try:
+        import psutil
+        for addrs in psutil.net_if_addrs().values():
+            for a in addrs:
+                if a.family == socket.AF_INET and a.address == ip and a.netmask:
+                    net = ipaddress.ip_network(f"{ip}/{a.netmask}", strict=False)
+                    if net.prefixlen >= 22:  # bigger networks than this would take far too long to sweep
+                        return str(net)
+    except Exception:
+        pass
+    return ".".join(ip.split(".")[:3]) + ".0/24"
 
 def _is_randomized(mac):
     # "locally administered" bit: phones/tablets use private Wi-Fi addresses
@@ -142,13 +159,11 @@ def arp_scan(ip_range, timeout=3):
     hosts = [str(h) for h in net.hosts()]
     hostset = set(hosts)
     seen = {}
-pending = hosts
-for attempt in range(4):  # keep asking addresses that have not answered yet
-    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as ex:
-        list(ex.map(_poke, pending))
-    time.sleep(1.5 if attempt == 0 else 1.0)
-    seen.update({ip: mac for ip, mac in _read_arp_table().items() if ip in hostset})
-    pending = [h for h in hosts if h not in seen]
+    for _ in range(2):  # a second pass catches devices that were slow to answer
+        with concurrent.futures.ThreadPoolExecutor(max_workers=64) as ex:
+            list(ex.map(_poke, hosts))
+        time.sleep(1.0)
+        seen.update({ip: mac for ip, mac in _read_arp_table().items() if ip in hostset})
     devices = [{"ip": ip, "mac": mac, "vendor": resolve_vendor(mac), "hostname": "", "open_ports": [], "banner": ""}
                for ip, mac in sorted(seen.items(), key=lambda kv: tuple(int(x) for x in kv[0].split(".")))]
     # device names (e.g. "iPhone-de-Ali", "DESKTOP-4F2K") are a strong clue; don't wait on slow lookups

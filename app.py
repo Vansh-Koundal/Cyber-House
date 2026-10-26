@@ -8,7 +8,8 @@ import streamlit as st
 
 from scanner import run_full_network_audit, detect_subnet, get_last_error
 from scan_io import ScanFileError, parse_scan
-from aiml_engine import classify_device, model_report, explain_risk, save_user_label, DEVICE_META
+from aiml_engine import (classify_device, model_report, explain_risk, save_user_label, make_label_record,
+                         get_classifier, DeviceClassifier, DEVICE_META)
 from evaluator import calculate_health_index
 from pdf_generator import generate_pdf_report
 
@@ -30,7 +31,7 @@ st.markdown(f"""
     var(--bg);
   color:var(--text); font-family:'IBM Plex Sans',sans-serif; }}
 header[data-testid="stHeader"] {{ background:transparent; }}
-[data-testid="stToolbar"], [data-testid="stDeployButton"], #MainMenu {{ display:none !important; }}
+, [data-testid="stDeployButton"], #MainMenu {{ display:none !important; }}
 .block-container {{ padding-top:2rem; max-width:1250px; }}
 h1,h2,h3,h4 {{ font-family:'Chakra Petch',sans-serif !important; letter-spacing:.01em; color:var(--text); }}
 section[data-testid="stSidebar"] {{ background:#070B14; border-right:1px solid var(--line); }}
@@ -223,14 +224,62 @@ def reset_fixes():
     st.session_state["fixed_ports"] = {}
 
 
+MAX_SESSION_LABELS = 50
+
+
+@st.cache_resource
+def _base_classifier():
+    # trained once and shared; it ignores any saved file so visitors never see each other's corrections
+    return DeviceClassifier(user_labels=[])
+
+
+def _session_classifier():
+    """Public website: a classifier that includes only THIS visitor's corrections."""
+    labels = st.session_state.get("session_labels", [])
+    if not labels:
+        return _base_classifier()
+    version = st.session_state.get("_labels_version", 0)
+    cached = st.session_state.get("_session_clf")
+    if cached is None or cached[0] != version:
+        cached = (version, DeviceClassifier(user_labels=labels))
+        st.session_state["_session_clf"] = cached
+    return cached[1]
+
+
+def _active_classifier():
+    return _session_classifier() if HOSTED else get_classifier()
+
+
+def classify(device):
+    return _session_classifier().classify(device) if HOSTED else classify_device(device)
+
+
+def _reclassify_last_scan():
+    raw = st.session_state.get("scan_raw", [])
+    st.session_state["raw_devices"] = [{**_clean(x), "classification": classify(x)} for x in raw]
+
+
 def teach(mac):
     """Save the user's correction for a device and re-run the classifier on the last scan."""
     label = st.session_state.get(f"teach_{mac}")
     raw = st.session_state.get("scan_raw", [])
     dev = next((x for x in raw if x.get("mac") == mac), None)
-    if dev and label in DEVICE_META:
+    if not dev or label not in DEVICE_META:
+        return
+    if HOSTED:  # this visit only
+        rec = make_label_record(dev, label)
+        labels = [u for u in st.session_state.get("session_labels", []) if u.get("mac") != rec["mac"]] + [rec]
+        st.session_state["session_labels"] = labels[-MAX_SESSION_LABELS:]
+        st.session_state["_labels_version"] = st.session_state.get("_labels_version", 0) + 1
+    else:  # on your own computer: remembered in a file
         save_user_label(dev, label)
-        st.session_state["raw_devices"] = [{**_clean(x), "classification": classify_device(x)} for x in raw]
+    _reclassify_last_scan()
+
+
+def reset_taught():
+    st.session_state["session_labels"] = []
+    st.session_state["_labels_version"] = st.session_state.get("_labels_version", 0) + 1
+    _reclassify_last_scan()
 
 
 # -----------------------------------------------------------------------------
@@ -330,7 +379,7 @@ if go:
                 raw = MOCK_SCENARIOS[scenario]
         st.session_state["source"] = source
         st.session_state["scan_raw"] = raw
-        st.session_state["raw_devices"] = [{**_clean(d), "classification": classify_device(d)} for d in raw]
+        st.session_state["raw_devices"] = [{**_clean(d), "classification": classify(d)} for d in raw]
 
 # -----------------------------------------------------------------------------
 # 5. Main layout
@@ -482,7 +531,7 @@ with t_dev:
                 f"{status_badge(d['status'])}</div>"
                 f"<p class='muted' style='margin:12px 0 0'>{note}</p></div>", unsafe_allow_html=True)
     with st.expander("How the AI identified each device"):
-        rep_ = model_report()
+        rep_ = model_report(_active_classifier())
         st.caption(f"Model: {rep_['algorithm']} · held-out accuracy on synthetic data: {rep_['holdout_accuracy']:.0%} · corrections taught by you: {rep_['user_labels']}")
         for d in devices:
             c = d["classification"]
@@ -491,16 +540,22 @@ with t_dev:
                 st.markdown(f"- Because {reason}")
             if c["note"]:
                 st.caption(c["note"])
-    if st.session_state.get("source") == "live" and not HOSTED:
+    if st.session_state.get("source") == "live" or HOSTED:
         with st.expander("Teach the AI (fix a wrong guess)", expanded=any(d["classification"]["uncertain"] for d in devices)):
-            st.caption("Choose the right type and press Save. The AI remembers it and learns from it.")
+            st.caption("Choose the right type and press Save. The AI learns from it right away. "
+                       + ("On this website your corrections last for this visit only." if HOSTED
+                          else "It is remembered on this computer."))
             types = list(DEVICE_META.keys())
             for d in devices:
+                if not d.get("mac"):
+                    continue
                 a_, b_, e_ = st.columns([3, 3, 1.2], vertical_alignment="center")
                 a_.markdown(f"**{d['vendor']}**  \n`{d['ip']}`" + (f"  ·  {d['hostname']}" if d.get("hostname") else ""))
                 b_.selectbox("Device type", types, index=types.index(d["classification"]["label"]),
                              key=f"teach_{d['mac']}", label_visibility="collapsed")
                 e_.button("Save", key=f"save_{d['mac']}", on_click=teach, args=(d["mac"],), use_container_width=True)
+            if HOSTED and st.session_state.get("session_labels"):
+                st.button("Forget my corrections", on_click=reset_taught)
     else:
         st.caption("Teaching the AI is available after a real scan.")
 
